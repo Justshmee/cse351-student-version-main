@@ -41,16 +41,27 @@ from cse351 import *
 
 # global
 call_count = 0
+lock = threading.Lock()
 
-def get_urls(film6, kind):
-    global call_count
-
-    urls = film6[kind]
-    print(kind)
-    for url in urls:
-        call_count += 1
-        item = get_data_from_server(url)
-        print(f'  - {item["name"]}')
+class URLFetcher(threading.Thread):
+    
+    def __init__(self, url, kind_name):
+        super().__init__()
+        self.url = url
+        self.kind_name = kind_name
+        self.name_value = None
+    
+    def run(self):
+        global call_count
+        item = get_data_from_server(self.url)
+        if item:
+            self.name_value = item.get("name", "Unknown")
+            with lock:
+                call_count += 1
+                print(f'  - {self.name_value}')
+    
+    def get_name(self):
+        return self.name_value
 
 def main():
     global call_count
@@ -62,12 +73,23 @@ def main():
     call_count += 1
     print_dict(film6)
 
-    # Retrieve people
-    get_urls(film6, 'characters')
-    get_urls(film6, 'planets')
-    get_urls(film6, 'starships')
-    get_urls(film6, 'vehicles')
-    get_urls(film6, 'species')
+    categories = ['characters', 'planets', 'starships', 'vehicles', 'species']
+    
+    for kind in categories:
+        urls = film6[kind]
+        print(kind)
+        
+        threads = []
+        
+        # Create thread for each URL
+        for url in urls:
+            thread = URLFetcher(url, kind)
+            threads.append(thread)
+            thread.start()
+        
+        # Join threads in category
+        for thread in threads:
+            thread.join()
 
     log.stop_timer('Total Time To complete')
     log.write(f'There were {call_count} calls to the server')
