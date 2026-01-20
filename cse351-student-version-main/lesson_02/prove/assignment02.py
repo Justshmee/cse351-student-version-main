@@ -31,7 +31,14 @@ def main():
 
     bank = Bank()
 
-    # TODO - Add a ATM_Reader for each data file
+    threads = []
+    for data_file in data_files:
+        reader = ATM_Reader(data_file, bank)
+        threads.append(reader)
+        reader.start()
+    
+    for thread in threads:
+        thread.join()
 
     test_balances(bank)
 
@@ -39,21 +46,83 @@ def main():
 
 
 # ===========================================================================
-class ATM_Reader():
-    # TODO - implement this class here
-    ...
+class ATM_Reader(threading.Thread):
+    def __init__(self, filename, bank):
+        threading.Thread.__init__(self)
+        self.filename = filename
+        self.bank = bank
+    
+    def run(self):
+        """Read and process ATM transaction file."""
+        with open(self.filename, 'r') as f:
+            for line in f:
+                line = line.strip()
+                if not line or line.startswith('#'):
+                    continue
+                
+                parts = line.split(',')
+                if len(parts) != 3:
+                    continue
+                
+                try:
+                    account_number = int(parts[0])
+                    trans_type = parts[1].strip()
+                    amount = parts[2].strip()
+                    
+                    if trans_type == 'd':
+                        self.bank.deposit(account_number, amount)
+                    elif trans_type == 'w':
+                        self.bank.withdraw(account_number, amount)
+                except (ValueError, IndexError):
+                    continue
 
 
 # ===========================================================================
 class Account():
-    # TODO - implement this class here
-    ...
+    def __init__(self):
+        self.balance = Money('0.00')
+    
+    def deposit(self, amount):
+        """Add amount to account balance."""
+        money_amount = Money(amount) if isinstance(amount, str) else amount
+        self.balance.add(money_amount)
+    
+    def withdraw(self, amount):
+        """Subtract amount from account balance."""
+        money_amount = Money(amount) if isinstance(amount, str) else amount
+        self.balance.sub(money_amount)
+    
+    def get_balance(self):
+        """Return the current balance."""
+        return self.balance
 
 
 # ===========================================================================
 class Bank():
-    # TODO - implement this class here
-    ...
+    def __init__(self):
+        self.accounts = {}
+        self.lock = threading.Lock()
+    
+    def deposit(self, account_number, amount):
+        """Deposit amount to an account."""
+        with self.lock:
+            if account_number not in self.accounts:
+                self.accounts[account_number] = Account()
+            self.accounts[account_number].deposit(amount)
+    
+    def withdraw(self, account_number, amount):
+        """Withdraw amount from an account."""
+        with self.lock:
+            if account_number not in self.accounts:
+                self.accounts[account_number] = Account()
+            self.accounts[account_number].withdraw(amount)
+    
+    def get_balance(self, account_number):
+        """Get the balance of an account."""
+        with self.lock:
+            if account_number not in self.accounts:
+                return Money('0.00')
+            return self.accounts[account_number].get_balance()
 
 
 # ---------------------------------------------------------------------------
