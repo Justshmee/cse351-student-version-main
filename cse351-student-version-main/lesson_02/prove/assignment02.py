@@ -1,7 +1,8 @@
 """
 Course    : CSE 351
 Assignment: 02
-Student   : <your name here>
+Student   : Dylan Rawlings
+Grade     : Meet's Requirements. I did the work, idk what else to say.
 
 Instructions:
     - review instructions in the course
