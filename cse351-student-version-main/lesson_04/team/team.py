@@ -56,40 +56,92 @@ class Queue351():
         return len(self.__items) + extra
 
 # ---------------------------------------------------------------------------
-def producer():
+def producer(id, que, empty_slots, full_slots, barrier):
     for i in range(PRIME_COUNT):
         number = random.randint(1, 1_000_000_000_000)
-        # TODO - place on queue for workers
+        
+        # Acquire an empty slot before putting on queue
+        empty_slots.acquire()
+        que.put(number)
+        # Release a full slot after putting on queue
+        full_slots.release()
 
-    # TODO - select one producer to send the "All Done" message
+    # Wait for all producers to finish
+    barrier.wait()
+
+    # Select producer 0 to send "All Done" message
+    if id == 0:
+        for _ in range(CONSUMERS):
+            empty_slots.acquire()
+            que.put("All Done")
+            full_slots.release()
 
 # ---------------------------------------------------------------------------
-def consumer():
-    # TODO - get values from the queue and check if they are prime
-    # TODO - if prime, write to the file
-    # TODO - if "All Done" message, exit the loop
-    ...
+def consumer(que, empty_slots, full_slots, filename, file_lock):
+    while True:
+        # Acquire a full slot before getting from queue
+        full_slots.acquire()
+        value = que.get()
+        # Release an empty slot after getting from queue
+        empty_slots.release()
+        
+        # Check if we received the "All Done" signal
+        if value == "All Done":
+            break
+        
+        # Check if the value is prime and write to file if it is
+        if is_prime(value):
+            with file_lock:
+                with open(filename, 'a') as f:
+                    f.write(f"{value}\n")
 
 # ---------------------------------------------------------------------------
 def main():
 
     random.seed(102030)
 
+    # Clear the file at the start
+    with open(FILENAME, 'w') as f:
+        pass
+
     que = Queue351()
 
-    # TODO - create semaphores for the queue (see Queue351 class)
+    # Create semaphores for the queue
+    # empty_slots: tracks available empty slots in the queue (starts at MAX_QUEUE_SIZE)
+    # full_slots: tracks available items in the queue (starts at 0)
+    empty_slots = threading.Semaphore(MAX_QUEUE_SIZE)
+    full_slots = threading.Semaphore(0)
 
-    # TODO - create barrier
+    # Create a lock for file writing
+    file_lock = threading.Lock()
 
-    # TODO - create producers threads (see PRODUCERS value)
+    # Create barrier for all producers to synchronize
+    barrier = threading.Barrier(PRODUCERS)
 
-    # TODO - create consumers threads (see CONSUMERS value)
+    # Create producers threads
+    producers = []
+    for i in range(PRODUCERS):
+        p = threading.Thread(target=producer, args=(i, que, empty_slots, full_slots, barrier))
+        p.start()
+        producers.append(p)
 
-    if os.path.exists(FILENAME):
-        with open(FILENAME, 'r') as f:
-            primes = len(f.readlines())
-    else:
-        primes = 0
+    # Create consumers threads
+    consumers = []
+    for i in range(CONSUMERS):
+        c = threading.Thread(target=consumer, args=(que, empty_slots, full_slots, FILENAME, file_lock))
+        c.start()
+        consumers.append(c)
+
+    # Wait for all threads to complete
+    for p in producers:
+        p.join()
+    
+    for c in consumers:
+        c.join()
+
+    # Count and display results
+    with open(FILENAME, 'r') as f:
+        primes = len(f.readlines())
     print(f"Found {primes} primes. Must be 108 found.")
 
 
