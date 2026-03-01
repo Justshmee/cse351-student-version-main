@@ -1,13 +1,13 @@
 """
 Course: CSE 351
 Assignment: 06
-Author: [Your Name]
+Author: Dylan
 
 Instructions:
 
 - see instructions in the assignment description in Canvas
 
-""" 
+"""
 
 import multiprocessing as mp
 import os
@@ -17,10 +17,11 @@ import numpy as np
 from cse351 import *
 
 # Folders
-INPUT_FOLDER = "faces"
-STEP1_OUTPUT_FOLDER = "step1_smoothed"
-STEP2_OUTPUT_FOLDER = "step2_grayscale"
-STEP3_OUTPUT_FOLDER = "step3_edges"
+BASE_DIR = os.path.dirname(__file__)
+INPUT_FOLDER = os.path.join(BASE_DIR, "faces")
+STEP1_OUTPUT_FOLDER = os.path.join(BASE_DIR, "step1_smoothed")
+STEP2_OUTPUT_FOLDER = os.path.join(BASE_DIR, "step2_grayscale")
+STEP3_OUTPUT_FOLDER = os.path.join(BASE_DIR, "step3_edges")
 
 # Parameters for image processing
 GAUSSIAN_BLUR_KERNEL_SIZE = (5, 5)
@@ -39,7 +40,7 @@ def create_folder_if_not_exists(folder_path):
 # ---------------------------------------------------------------------------
 def task_convert_to_grayscale(image):
     if len(image.shape) == 2 or (len(image.shape) == 3 and image.shape[2] == 1):
-        return image # Already grayscale
+        return image  # Already grayscale
     return cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
 
 # ---------------------------------------------------------------------------
@@ -49,87 +50,109 @@ def task_smooth_image(image, kernel_size):
 # ---------------------------------------------------------------------------
 def task_detect_edges(image, threshold1, threshold2):
     if len(image.shape) == 3 and image.shape[2] == 3:
-        print("Warning: Applying Canny to a 3-channel image. Converting to grayscale first for Canny.")
         image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-    elif len(image.shape) == 3 and image.shape[2] != 1 : # Should not happen with typical images
-        print(f"Warning: Input image for Canny has an unexpected number of channels: {image.shape[2]}")
-        return image # Or raise error
     return cv2.Canny(image, threshold1, threshold2)
 
 # ---------------------------------------------------------------------------
-def process_images_in_folder(input_folder,              # input folder with images
-                             output_folder,             # output folder for processed images
-                             processing_function,       # function to process the image (ie., task_...())
-                             load_args=None,            # Optional args for cv2.imread
-                             processing_args=None):     # Optional args for processing function
+def worker_smooth(input_queue, output_queue):
+    while True:
+        filename = input_queue.get()
+        if filename is None:
+            output_queue.put(None)
+            break
 
-    create_folder_if_not_exists(output_folder)
-    print(f"\nProcessing images from '{input_folder}' to '{output_folder}'...")
+        input_path = os.path.join(INPUT_FOLDER, filename)
+        output_path = os.path.join(STEP1_OUTPUT_FOLDER, filename)
 
-    processed_count = 0
-    for filename in os.listdir(input_folder):
-        file_ext = os.path.splitext(filename)[1].lower()
-        if file_ext not in ALLOWED_EXTENSIONS:
+        img = cv2.imread(input_path)
+        if img is None:
             continue
 
-        input_image_path = os.path.join(input_folder, filename)
-        output_image_path = os.path.join(output_folder, filename) # Keep original filename
+        smoothed = task_smooth_image(img, GAUSSIAN_BLUR_KERNEL_SIZE)
+        cv2.imwrite(output_path, smoothed)
 
-        try:
-            # Read the image
-            if load_args is not None:
-                img = cv2.imread(input_image_path, load_args)
-            else:
-                img = cv2.imread(input_image_path)
+        output_queue.put(filename)
 
-            if img is None:
-                print(f"Warning: Could not read image '{input_image_path}'. Skipping.")
-                continue
+# ---------------------------------------------------------------------------
+def worker_grayscale(input_queue, output_queue):
+    while True:
+        filename = input_queue.get()
+        if filename is None:
+            output_queue.put(None)
+            break
 
-            # Apply the processing function
-            if processing_args:
-                processed_img = processing_function(img, *processing_args)
-            else:
-                processed_img = processing_function(img)
+        input_path = os.path.join(STEP1_OUTPUT_FOLDER, filename)
+        output_path = os.path.join(STEP2_OUTPUT_FOLDER, filename)
 
-            # Save the processed image
-            cv2.imwrite(output_image_path, processed_img)
+        img = cv2.imread(input_path)
+        if img is None:
+            continue
 
-            processed_count += 1
-        except Exception as e:
-            print(f"Error processing file '{input_image_path}': {e}")
+        gray = task_convert_to_grayscale(img)
+        cv2.imwrite(output_path, gray)
 
-    print(f"Finished processing. {processed_count} images processed into '{output_folder}'.")
+        output_queue.put(filename)
+
+# ---------------------------------------------------------------------------
+def worker_edges(input_queue):
+    while True:
+        filename = input_queue.get()
+        if filename is None:
+            break
+
+        input_path = os.path.join(STEP2_OUTPUT_FOLDER, filename)
+        output_path = os.path.join(STEP3_OUTPUT_FOLDER, filename)
+
+        img = cv2.imread(input_path, cv2.IMREAD_GRAYSCALE)
+        if img is None:
+            continue
+
+        edges = task_detect_edges(img, CANNY_THRESHOLD1, CANNY_THRESHOLD2)
+        cv2.imwrite(output_path, edges)
 
 # ---------------------------------------------------------------------------
 def run_image_processing_pipeline():
     print("Starting image processing pipeline...")
 
-    # TODO
-    # - create queues
-    # - create barriers
-    # - create the three processes groups
-    # - you are free to change anything in the program as long as you
-    #   do all requirements.
+    # Create output folders
+    create_folder_if_not_exists(STEP1_OUTPUT_FOLDER)
+    create_folder_if_not_exists(STEP2_OUTPUT_FOLDER)
+    create_folder_if_not_exists(STEP3_OUTPUT_FOLDER)
 
-    # --- Step 1: Smooth Images ---
-    process_images_in_folder(INPUT_FOLDER, STEP1_OUTPUT_FOLDER, task_smooth_image,
-                             processing_args=(GAUSSIAN_BLUR_KERNEL_SIZE,))
+    # Create Queues
+    queue1 = mp.Queue()
+    queue2 = mp.Queue()
+    queue3 = mp.Queue()
 
-    # --- Step 2: Convert to Grayscale ---
-    process_images_in_folder(STEP1_OUTPUT_FOLDER, STEP2_OUTPUT_FOLDER, task_convert_to_grayscale)
+    # Create the three process groups
+    process_smooth = mp.Process(target=worker_smooth, args=(queue1, queue2))
+    process_gray = mp.Process(target=worker_grayscale, args=(queue2, queue3))
+    process_edges = mp.Process(target=worker_edges, args=(queue3,))
 
-    # --- Step 3: Detect Edges ---
-    process_images_in_folder(STEP2_OUTPUT_FOLDER, STEP3_OUTPUT_FOLDER, task_detect_edges,
-                             load_args=cv2.IMREAD_GRAYSCALE,        
-                             processing_args=(CANNY_THRESHOLD1, CANNY_THRESHOLD2))
+    # Start processes
+    process_smooth.start()
+    process_gray.start()
+    process_edges.start()
+
+    # Feed filenames into first queue
+    for filename in os.listdir(INPUT_FOLDER):
+        file_ext = os.path.splitext(filename)[1].lower()
+        if file_ext in ALLOWED_EXTENSIONS:
+            queue1.put(filename)
+
+    # Send termination signal
+    queue1.put(None)
+
+    # Wait for processes to finish
+    process_smooth.join()
+    process_gray.join()
+    process_edges.join()
 
     print("\nImage processing pipeline finished!")
     print(f"Original images are in: '{INPUT_FOLDER}'")
-    print(f"Grayscale images are in: '{STEP1_OUTPUT_FOLDER}'")
-    print(f"Smoothed images are in: '{STEP2_OUTPUT_FOLDER}'")
+    print(f"Smoothed images are in: '{STEP1_OUTPUT_FOLDER}'")
+    print(f"Grayscale images are in: '{STEP2_OUTPUT_FOLDER}'")
     print(f"Edge images are in: '{STEP3_OUTPUT_FOLDER}'")
-
 
 # ---------------------------------------------------------------------------
 if __name__ == "__main__":

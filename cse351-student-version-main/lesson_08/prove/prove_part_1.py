@@ -2,7 +2,7 @@
 Course: CSE 251 
 Assignment: 08 Prove Part 1
 File:   prove_part_1.py
-Author: <Add name here>
+Author: Dylan
 
 Purpose: Part 1 of assignment 8, finding the path to the end of a maze using recursion.
 
@@ -14,6 +14,7 @@ Instructions:
 """
 
 import math
+import os
 from screen import Screen
 from maze import Maze
 import cv2
@@ -34,10 +35,29 @@ def solve_path(maze):
     """ Solve the maze and return the path found between the start and end positions.  
         The path is a list of positions, (x, y) """
     path = []
-    # TODO: Solve the maze recursively while tracking the correct path.
 
-    # Hint: You can create an inner function to do the recursion
+    # recursive DFS from (row, col)
+    def _walk(row, col):
+        if not maze.can_move_here(row, col):
+            return False
 
+        maze.move(row, col, COLOR)
+        path.append((row, col))
+
+        if maze.at_end(row, col):
+            return True
+
+        for (nr, nc) in maze.get_possible_moves(row, col):
+            if _walk(nr, nc):
+                return True
+
+        maze.restore(row, col)  # dead end
+        path.pop()
+        return False
+
+    # start recursion at the maze's starting position
+    start = maze.get_start_pos()
+    _walk(*start)
     return path
 
 
@@ -90,13 +110,16 @@ def find_paths(log):
         'large-open.bmp'
     )
 
+    script_dir = os.path.dirname(__file__)
+    mazes_dir = os.path.join(script_dir, 'mazes')
+
     log.write('*' * 40)
     log.write('Part 1')
     for filename in files:
-        filename = f'./mazes/{filename}'
+        filepath = os.path.join(mazes_dir, filename)
         log.write()
-        log.write(f'File: {filename}')
-        path = get_path(log, filename)
+        log.write(f'File: {filepath}')
+        path = get_path(log, filepath)
         log.write(f'Found path has length     = {len(path)}')
     log.write('*' * 40)
 

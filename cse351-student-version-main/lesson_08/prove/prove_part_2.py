@@ -2,7 +2,7 @@
 Course: CSE 351 
 Assignment: 08 Prove Part 2
 File:   prove_part_2.py
-Author: <Add name here>
+Author: Dylan
 
 Purpose: Part 2 of assignment 8, finding the path to the end of a maze using recursion.
 
@@ -30,6 +30,7 @@ Why would it work?
 """
 
 import math
+import os
 import threading 
 from screen import Screen
 from maze import Maze
@@ -84,8 +85,55 @@ def get_color():
 def solve_find_end(maze):
     """ Finds the end position using threads. Nothing is returned. """
     # When one of the threads finds the end position, stop all of them.
-    global stop
+    global stop, thread_count
+
     stop = False
+    thread_count = 1          # count the initial (main) thread
+
+    # this list is only used for reference; joining happens locally in _walk
+    # the lock is not strictly needed for append under GIL but kept for clarity
+    thread_list = []
+
+    def _walk(row, col, color):
+        """Recursive worker; forks spawn threads."""
+        nonlocal thread_list
+        global stop, thread_count
+
+        if stop or not maze.can_move_here(row, col):
+            return
+
+        maze.move(row, col, color)
+        if maze.at_end(row, col):
+            stop = True
+            return
+
+        moves = maze.get_possible_moves(row, col)
+        local_threads = []
+        first = True
+        for (nr, nc) in moves:
+            if stop: break
+            if first:
+                first = False
+                _walk(nr, nc, color)
+            else:
+                new_color = get_color()
+                thread_count += 1
+                t = threading.Thread(target=_walk, args=(nr, nc, new_color))
+                local_threads.append(t)
+                thread_list.append(t)
+                t.start()
+
+        for t in local_threads:
+            t.join()
+
+    # kick off the recursion from the start position with a fresh color
+    start_color = get_color()
+    start = maze.get_start_pos()
+    _walk(start[0], start[1], start_color)
+
+    # all threads should have been joined via the recursion, but join any remaining
+    for t in thread_list:
+        t.join()
 
 
 
@@ -139,13 +187,16 @@ def find_ends(log):
         ('large-open.bmp', False)
     )
 
+    script_dir = os.path.dirname(__file__)
+    mazes_dir = os.path.join(script_dir, 'mazes')
+
     log.write('*' * 40)
     log.write('Part 2')
     for filename, delay in files:
-        filename = f'./mazes/{filename}'
+        filepath = os.path.join(mazes_dir, filename)
         log.write()
-        log.write(f'File: {filename}')
-        find_end(log, filename, delay)
+        log.write(f'File: {filepath}')
+        find_end(log, filepath, delay)
     log.write('*' * 40)
 
 

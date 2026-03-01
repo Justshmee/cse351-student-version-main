@@ -1,0 +1,43 @@
+11:58:25| ****************************************
+11:58:25| Part 2
+11:58:25| 
+11:58:25| File: c:\Users\dylra\OneDrive\Desktop\cse351-student-version-main\cse351-student-version-main\lesson_08\prove\mazes\very-small.bmp
+11:58:25| Number of drawing commands = 88
+11:58:25| Number of threads created  = 3
+11:58:33| 
+11:58:33| File: c:\Users\dylra\OneDrive\Desktop\cse351-student-version-main\cse351-student-version-main\lesson_08\prove\mazes\very-small-loops.bmp
+11:58:33| Number of drawing commands = 278
+11:58:33| Number of threads created  = 2
+11:58:42| 
+11:58:42| File: c:\Users\dylra\OneDrive\Desktop\cse351-student-version-main\cse351-student-version-main\lesson_08\prove\mazes\small.bmp
+11:58:43| Number of drawing commands = 2040
+11:58:43| Number of threads created  = 19
+11:59:44| 
+11:59:44| File: c:\Users\dylra\OneDrive\Desktop\cse351-student-version-main\cse351-student-version-main\lesson_08\prove\mazes\small-loops.bmp
+11:59:44| Number of drawing commands = 1684
+11:59:44| Number of threads created  = 9
+11:59:47| 
+11:59:47| File: c:\Users\dylra\OneDrive\Desktop\cse351-student-version-main\cse351-student-version-main\lesson_08\prove\mazes\small-odd.bmp
+11:59:47| Number of drawing commands = 2200
+11:59:47| Number of threads created  = 183
+11:59:51| 
+11:59:51| File: c:\Users\dylra\OneDrive\Desktop\cse351-student-version-main\cse351-student-version-main\lesson_08\prove\mazes\small-open.bmp
+11:59:51| Number of drawing commands = 2516
+11:59:51| Number of threads created  = 376
+11:59:55| 
+11:59:55| File: c:\Users\dylra\OneDrive\Desktop\cse351-student-version-main\cse351-student-version-main\lesson_08\prove\mazes\large.bmp
+11:59:55| Number of drawing commands = 26932
+11:59:55| Number of threads created  = 220
+12:00:21| 
+12:00:21| File: c:\Users\dylra\OneDrive\Desktop\cse351-student-version-main\cse351-student-version-main\lesson_08\prove\mazes\large-loops.bmp
+12:00:21| Number of drawing commands = 25554
+12:00:21| Number of threads created  = 248
+12:00:50| 
+12:00:50| File: c:\Users\dylra\OneDrive\Desktop\cse351-student-version-main\cse351-student-version-main\lesson_08\prove\mazes\large-squares.bmp
+12:00:51| Number of drawing commands = 25228
+12:00:51| Number of threads created  = 339
+12:01:08| 
+12:01:08| File: c:\Users\dylra\OneDrive\Desktop\cse351-student-version-main\cse351-student-version-main\lesson_08\prove\mazes\large-open.bmp
+12:01:09| Number of drawing commands = 6661
+12:01:09| Number of threads created  = 511
+12:01:18| ****************************************
